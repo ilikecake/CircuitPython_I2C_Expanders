@@ -28,6 +28,12 @@ keywords = [
     "pca9555",
     "pcal9555",
     "pca9554",
+    "pcal9554",
+    "pca9538",
+    "pcal9538",
+    "i2c",
+    "expander",
+    "gpio",
 ]
 license = {text = "MIT"}
 classifiers = [
