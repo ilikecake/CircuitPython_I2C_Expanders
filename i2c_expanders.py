@@ -3,7 +3,7 @@
 #
 # SPDX-License-Identifier: MIT
 """
-`ilikecake_circuitpython_i2c_expanders`
+`i2c_expanders`
 ================================================================================
 
 Drivers for various I2C GPIO expanders.
@@ -34,4 +34,4 @@ Implementation Notes
 # imports
 
 __version__ = "0.0.0+auto.0"
-__repo__ = "https://github.com/ilikecake/Ilikecake_CircuitPython_CircuitPython_I2C_Expanders.git"
+__repo__ = "https://github.com/ilikecake/CircuitPython_I2C_Expanders.git"
