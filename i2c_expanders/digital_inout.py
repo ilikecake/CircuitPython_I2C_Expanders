@@ -8,7 +8,7 @@
 `digital_inout`
 ====================================================
 
-An implementation of the digitalio interface that works with the I2C expanders. 
+An implementation of the digitalio interface that works with the I2C expanders.
 
 Heavily based on the version written by Tony DiCola for the MCP230xx library.
 
@@ -16,11 +16,14 @@ Heavily based on the version written by Tony DiCola for the MCP230xx library.
 """
 
 import digitalio
-import i2c_expander
+from i2c_expanders.helpers import Capability, _get_bit, _enable_bit, _clear_bit
+
+# from i2c_expanders.i2c_expander import Capability
 
 __version__ = "0.0.0+auto.0"
 __repo__ = "https://github.com/ilikecake/CircuitPython_I2C_Expanders.git"
 
+"""
 # Internal helpers to simplify setting and getting a bit inside an integer.
 def _get_bit(val, bit):
     return val & (1 << bit) > 0
@@ -32,6 +35,7 @@ def _enable_bit(val, bit):
 
 def _clear_bit(val, bit):
     return val & ~(1 << bit)
+"""
 
 
 class DigitalInOut:
@@ -43,7 +47,8 @@ class DigitalInOut:
     """
 
     def __init__(self, pin_number, ioexpander_class):
-        """Specify the pin number of the expander and pass the class object. Pin numbers start a 0.
+        """Specify the pin number of the expander and pass the class object.
+        Pin numbers start a 0.
         """
         self._pin = pin_number
         self._ioexp = ioexpander_class
@@ -71,7 +76,7 @@ class DigitalInOut:
         self.pull = pull
         self.invert_polarity = invert_polarity
 
-    #TODO: Check if I need these things
+    # TODO: Check if I need these things
     # pylint: enable=unused-argument
 
     @property
@@ -105,41 +110,52 @@ class DigitalInOut:
         elif val == digitalio.Direction.OUTPUT:
             self._ioexp.iodir = _clear_bit(self._ioexp.iodir, self._pin)
         else:
-            raise ValueError("Expected 'digitalio.Direction.INPUT' or 'digitalio.Direction.OUTPUT'.")
+            raise ValueError(
+                "Expected 'digitalio.Direction.INPUT' or 'digitalio.Direction.OUTPUT'."
+            )
 
     @property
     def pull(self):
-        """Returns the setup of internal pull up/down resistors. If pull up/down resistors are not supported,
-           this function will raise an error.
+        """Returns the setup of internal pull up/down resistors. If pull up/down resistors
+        are not supported, this function will raise an error.
         """
-        if (not _get_bit(self._ioexp._capability, i2c_expander.Capability.PULL_DOWN)) and \
-                (not _get_bit(self._ioexp._capability, i2c_expander.Capability.PULL_UP)):
+        if (not _get_bit(self._ioexp.capability, Capability.PULL_DOWN)) and (
+            not _get_bit(self._ioexp.capability, Capability.PULL_UP)
+        ):
             raise ValueError("Pull up/down resistors are not supported.")
 
         return self._ioexp.get_pupd(self._pin)
 
     @pull.setter
     def pull(self, val):
-        #User requests pull up, pull up resistors are not supported.
-        if (val == digitalio.Pull.UP) and (not _get_bit(self._ioexp._capability, i2c_expander.Capability.PULL_UP)):
+        # User requests pull up, pull up resistors are not supported.
+        if (val == digitalio.Pull.UP) and (
+            not _get_bit(self._ioexp.capability, Capability.PULL_UP)
+        ):
             raise ValueError("Pull-up resistors are not supported.")
 
-        #User requests pull down, pull down resistors are not supported.
-        elif (val == digitalio.Pull.DOWN) and (not _get_bit(self._ioexp._capability, i2c_expander.Capability.PULL_DOWN)):
+        # User requests pull down, pull down resistors are not supported.
+        if (val == digitalio.Pull.DOWN) and (
+            not _get_bit(self._ioexp.capability, Capability.PULL_DOWN)
+        ):
             raise ValueError("Pull-down resistors are not supported.")
 
-        #User requests no pull up/down. Pull up/down is not supported. There is nothing to do in this case,
-        #but we have to catch it here or it will cause an error when the function tries to set non-exsistent
-        #registers for no pull up/down.
-        elif (val == None) and \
-                (not _get_bit(self._ioexp._capability, i2c_expander.Capability.PULL_DOWN)) and \
-                (not _get_bit(self._ioexp._capability, i2c_expander.Capability.PULL_UP)):
+        # User requests no pull up/down. Pull up/down is not supported. There is nothing to do
+        # in this case, but we have to catch it here or it will cause an error when the function
+        # tries to set non-exsistent registers for no pull up/down.
+        if (
+            (val is None)
+            and (not _get_bit(self._ioexp.capability, Capability.PULL_DOWN))
+            and (not _get_bit(self._ioexp.capability, Capability.PULL_UP))
+        ):
             return
 
-        #This function sets the pull up/down resistors. This may be different for different IO expanders.
+        # TODO: What did I mean by this comment?
+        # This function sets the pull up/down resistors.
+        # This may be different for different IO expanders.
         self._ioexp.set_pupd(self._pin, val)
 
-    #TODO: Check capability on these
+    # TODO: Check capability on these
     @property
     def invert_polarity(self):
         """The polarity of the pin, either True for an Inverted or
@@ -156,11 +172,12 @@ class DigitalInOut:
         else:
             self._ioexp.ipol = _clear_bit(self._ioexp.ipol, self._pin)
 
-    #TODO: Not implemented. Not sure if I need these here, the expanders I am using do not support this capability on a per-pin basis.
+    # TODO: Not implemented. Not sure if I need these here, the expanders
+    # I am using do not support this capability on a per-pin basis.
     @property
     def drive_mode(self):
-        """Set the drive mode on expanders that support it. Will raise an error if setting drive mode
-        is not supported.
+        """Set the drive mode on expanders that support it. Will raise an error if setting
+        drive mode is not supported.
         """
         if _get_bit(self._ioexp.ipol, self._pin):
             return True
@@ -168,7 +185,8 @@ class DigitalInOut:
 
     @drive_mode.setter
     def drive_mode(self, val):
+        # TODO: This code is not right. Remove or something
         if val:
             self._ioexp.ipol = _enable_bit(self._ioexp.ipol, self._pin)
         else:
-            self._mcp.ipol = _clear_bit(self._mcp.ipol, self._pin)
+            self._ioexp.ipol = _clear_bit(self._ioexp.ipol, self._pin)

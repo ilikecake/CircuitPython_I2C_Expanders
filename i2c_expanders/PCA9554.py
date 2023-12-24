@@ -7,7 +7,7 @@
 # pylint: disable=too-many-public-methods
 
 
-#TODO: mostly a copy/paste from the PCA9555, make sure this stuff is still true here.
+# TODO: mostly a copy/paste from the PCA9555, make sure this stuff is still true here.
 """
 `pca9554`
 ====================================================
@@ -15,13 +15,13 @@
 CircuitPython module for the PCA9554 and compatible expanders.
 The PCA9554 is a basic 8 pin I2C expander.
     *Configurable pins as input or output
-    *Per pin polarity inversion. This inverts the value that is returned when an input port 
+    *Per pin polarity inversion. This inverts the value that is returned when an input port
      is read. Does not affect the pins set as outputs.
-    *Pin change interrupts. An interrupt is generated on any pin change for a pin configured 
-     as an input. The interrupt signal is cleared by a change back to the original value of 
+    *Pin change interrupts. An interrupt is generated on any pin change for a pin configured
+     as an input. The interrupt signal is cleared by a change back to the original value of
      the input pin or a read to the GPIO register.This will have to be detected and tracked in
      user code. There is no way to tell from the device what pin caused the interrupt.
-    
+
 Use this class if you are using a PCA9554 or compatible expander. This class is also used
 as the base class for the PCAL9554 expander.
 
@@ -33,27 +33,30 @@ Compatible Devices
     *PCA9554
     *PCA9538
     *TODO
-    
+
 Heavily based on the code written by Tony DiCola for the MCP230xx library.
 
 * Author(s): Pat Satyshur
 """
 
-from micropython import const
-from i2c_expander import I2c_Expander
-from lib.digital_inout import DigitalInOut
-#from mcp230xx import MCP230XX	#removed relative import, might need this again if this is a module??
-#from digital_inout import DigitalInOut	#removed relative import, might need this again if this is a module??
+# TODO: Fix these imports.
+from micropython import (
+    const,
+)  # TODO: What does const get me in this situation? Can I remove it?
+from i2c_expanders.i2c_expander import I2c_Expander
+from i2c_expanders.helpers import _enable_bit, Capability
 
 __version__ = "0.0.0+auto.0"
 __repo__ = "https://github.com/ilikecake/CircuitPython_I2C_Expanders.git"
 
-_PCA9554_ADDRESS = const(0x27)		#TODO: this will probably change based on the device used. Not sure how to deal with this. Maybe remove the default and force the user to specify the address?
+# TODO: probably don't want this here.
+_PCA9554_ADDRESS = const(0x27)
 
-_PCA9554_INPUT = const(0x00)	#Input register
-_PCA9554_OUTPUT = const(0x01)	#Output register
-_PCA9554_IPOL = const(0x02)		#Polarity inversion register
-_PCA9554_IODIR = const(0x03)	#Configuration (direction) register
+_PCA9554_INPUT = const(0x00)  # Input register
+_PCA9554_OUTPUT = const(0x01)  # Output register
+_PCA9554_IPOL = const(0x02)  # Polarity inversion register
+_PCA9554_IODIR = const(0x03)  # Configuration (direction) register
+
 
 class PCA9554(I2c_Expander):
     """Supports PCA9554 instance on specified I2C bus and optionally
@@ -62,10 +65,12 @@ class PCA9554(I2c_Expander):
 
     def __init__(self, i2c, address=_PCA9554_ADDRESS, reset=True):
         super().__init__(i2c, address)
+        self.maxpins = 7
+        self.capability = _enable_bit(0x00, Capability.INVERT_POL)
         if reset:
             # Reset to all inputs with no pull-ups and no inverted polarity.
-            self.iodir = 0xFF		#Set all IOs to inputs
-            self.ipol = 0x00		#Set polatiry inversion off for all pins
+            self.iodir = 0xFF  # Set all IOs to inputs
+            self.ipol = 0x00  # Set polatiry inversion off for all pins
 
     @property
     def gpio(self):

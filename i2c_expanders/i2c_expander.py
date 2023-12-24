@@ -7,7 +7,7 @@
 `i2c_expander`
 ====================================================
 
-The base class for the I2C expanders. 
+The base class for the I2C expanders.
 This class should not be included directly in user code. It provides base functions that are used by
 all of the I2C expander drivers.
 
@@ -17,7 +17,9 @@ Based heavily on the code from Red_M for the MCP230xx library.
 """
 
 from adafruit_bus_device import i2c_device
-from lib.digital_inout import DigitalInOut
+from i2c_expanders.digital_inout import DigitalInOut
+
+# from i2c_expanders.helpers import Capability
 
 __version__ = "0.0.0+auto.0"
 __repo__ = "https://github.com/ilikecake/CircuitPython_I2C_Expanders.git"
@@ -28,17 +30,11 @@ __repo__ = "https://github.com/ilikecake/CircuitPython_I2C_Expanders.git"
 # TODO: DO I want this? Why is this not inside the class?
 _BUFFER = bytearray(3)
 
-class capability():
-    """IO Expander Capability
-        A one in the corresponding bit position below indicates
-        that feature is supported by the IO expander.
-    """
-    PULL_UP     = 0
-    PULL_DOWN   = 1
-    INVERT_POL  = 2
-    DRIVE_MODE  = 3 #TODO: What to do with this? the PACL9555 is only capable of per bank drive mode settings
+# Figure out how to doccument the maxpins with this:
+# how many pins does the IO expander have starts at 0
+# and goes up to this value. An 8 pin expander would
+# set maxpins to 7 (0-7).
 
-Capability = capability()
 
 # pylint: disable=too-few-public-methods
 class I2c_Expander:
@@ -46,8 +42,8 @@ class I2c_Expander:
 
     def __init__(self, bus_device, address):
         self._device = i2c_device.I2CDevice(bus_device, address)
-        self._maxpins = 0           #how many pins does the IO expander have starts at 0 and goes up to this value. An 8 pin expander would set maxpins to 7 (0-7).
-        self._capability = 0x00     #Pull up, pull down, open drain, etc...
+        self.maxpins = 0
+        self.capability = 0x00  # Pull up, pull down, open drain, etc...
 
     def _read_u16le(self, register):
         # Read an unsigned 16 bit little endian value from the specified 8-bit
@@ -96,8 +92,10 @@ class I2c_Expander:
         return DigitalInOut(pin, self)
 
     def _validate_pin(self, pin):
-        ''' Internal helper function to make sure the pin that is passed to the function is valid.
-            Will raise a value error if an invalid pin number is given.
-        '''
-        if (pin > self._maxpins) or (pin < 0):
-            raise ValueError(f"Invalid pin number {pin}. Pin should be 0-{self._maxpins}.")
+        """Internal helper function to make sure the pin that is passed to the function is valid.
+        Will raise a value error if an invalid pin number is given.
+        """
+        if (pin > self.maxpins) or (pin < 0):
+            raise ValueError(
+                f"Invalid pin number {pin}. Pin should be 0-{self.maxpins}."
+            )
