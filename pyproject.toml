@@ -49,7 +49,8 @@ dynamic = ["dependencies", "optional-dependencies"]
 [tool.setuptools]
 # TODO: IF LIBRARY FILES ARE A PACKAGE FOLDER,
 #       CHANGE `py_modules = ['...']` TO `packages = ['...']`
-py-modules = ["i2c_expanders"]
+#py-modules = ["i2c_expanders"]
+packages = ['i2c_expanders']
 
 [tool.setuptools.dynamic]
 dependencies = {file = ["requirements.txt"]}

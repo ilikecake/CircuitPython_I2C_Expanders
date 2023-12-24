@@ -6,3 +6,12 @@
 
 .. automodule:: i2c_expanders
     :members:
+
+.. automodule:: i2c_expanders.i2c_expander
+    :members:
+
+.. automodule:: i2c_expanders.digital_inout
+    :members:
+
+.. automodule:: i2c_expanders.PCA9555
+    :members:
