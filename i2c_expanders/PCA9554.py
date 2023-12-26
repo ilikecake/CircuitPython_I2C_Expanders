@@ -9,18 +9,19 @@
 
 # TODO: mostly a copy/paste from the PCA9555, make sure this stuff is still true here.
 """
-`pca9554`
+`PCA9554`
 ====================================================
 
 CircuitPython module for the PCA9554 and compatible expanders.
 The PCA9554 is a basic 8 pin I2C expander.
-    *Configurable pins as input or output
-    *Per pin polarity inversion. This inverts the value that is returned when an input port
-     is read. Does not affect the pins set as outputs.
-    *Pin change interrupts. An interrupt is generated on any pin change for a pin configured
-     as an input. The interrupt signal is cleared by a change back to the original value of
-     the input pin or a read to the GPIO register.This will have to be detected and tracked in
-     user code. There is no way to tell from the device what pin caused the interrupt.
+
+* Configurable pins as input or output
+* Per pin polarity inversion. This inverts the value that is returned when an input port
+  is read. Does not affect the pins set as outputs.
+* Pin change interrupts. An interrupt is generated on any pin change for a pin configured
+  as an input. The interrupt signal is cleared by a change back to the original value of
+  the input pin or a read to the GPIO register.This will have to be detected and tracked in
+  user code. There is no way to tell from the device what pin caused the interrupt.
 
 Use this class if you are using a PCA9554 or compatible expander. This class is also used
 as the base class for the PCAL9554 expander.
@@ -30,9 +31,10 @@ Where I find them, I will probably make a separate class name to make it obvious
 supported. A list of other devices that should be compatible is below.
 
 Compatible Devices
-    *PCA9554
-    *PCA9538
-    *TODO
+
+* PCA9554
+* PCA9538
+* TODO
 
 Heavily based on the code written by Tony DiCola for the MCP230xx library.
 

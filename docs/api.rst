@@ -13,5 +13,17 @@
 .. automodule:: i2c_expanders.digital_inout
     :members:
 
+.. automodule:: i2c_expanders.helpers
+    :members:
+
 .. automodule:: i2c_expanders.PCA9555
+    :members:
+
+.. automodule:: i2c_expanders.PCAL9555
+    :members:
+
+.. automodule:: i2c_expanders.PCA9554
+    :members:
+
+.. automodule:: i2c_expanders.PCAL9554
     :members:

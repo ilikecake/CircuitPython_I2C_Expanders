@@ -7,7 +7,7 @@
 # pylint: disable=too-many-public-methods
 
 """
-`pcal9555`
+`PCAL9555`
 ====================================================
 
 CircuitPython module for the PCAL9555 I2C I/O extenders.
@@ -15,19 +15,20 @@ The PCAL9555 is a 16 pin IO Expander. It is software compatible with the PCA9555
 bunch of added functions.
 
 Added features of these expanders include:
-    *Built in pull up and pull down resistors.
-    *Per pin selectable drive strength.
-    *Maskable interrupt pins
-    *Latching interrupt option
-    *Per bank push-pull/open drain pin setup.
+
+* Built in pull up and pull down resistors.
+* Per pin selectable drive strength.
+* Maskable interrupt pins
+* Latching interrupt option
+* Per bank push-pull/open drain pin setup.
 
 There are likely other devices that use this same command set and can be used with this class.
 Where I find them, I will probably make a separate class name to make it obvious what devices are
 supported. A list of other devices that should be compatible is below.
 
 Compatible Devices
-    *PCAL9555
-    *TODO
+* PCAL9555
+* TODO
 
 Heavily based on the code written by Tony DiCola for the MCP230xx library.
 

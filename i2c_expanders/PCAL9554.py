@@ -8,7 +8,7 @@
 
 # TODO: mostly a copy/paste from the PCAL9555, make sure this stuff is still true here.
 """
-`pcal9554`
+`PCAL9554`
 ====================================================
 
 CircuitPython module for the PCAL9554 I2C I/O extenders.
@@ -16,20 +16,22 @@ The PCAL9554 is a 8 pin IO Expander. It is software compatible with the PCA9554,
 bunch of added functions.
 
 Added features of these expanders include:
-    *Built in pull up and pull down resistors.
-    *Per pin selectable drive strength.
-    *Maskable interrupt pins
-    *Latching interrupt option
-    *Per bank push-pull/open drain pin setup.
+
+* Built in pull up and pull down resistors.
+* Per pin selectable drive strength.
+* Maskable interrupt pins
+* Latching interrupt option
+* Per bank push-pull/open drain pin setup.
 
 There are likely other devices that use this same command set and can be used with this class.
 Where I find them, I will probably make a separate class name to make it obvious what devices are
 supported. A list of other devices that should be compatible is below.
 
 Compatible Devices
-    *PCAL9554
-    *PCAL9538
-    *TODO
+
+* PCAL9554
+* PCAL9538
+* TODO
 
 Heavily based on the code written by Tony DiCola for the MCP230xx library.
 
