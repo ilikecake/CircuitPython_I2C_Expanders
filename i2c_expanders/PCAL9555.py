@@ -4,7 +4,13 @@
 #
 # SPDX-License-Identifier: MIT
 
-# pylint: disable=too-many-public-methods
+# pylint: disable=too-many-public-methods, duplicate-code
+
+# Note: there is a bit of duplicated code between this and the PCAL9554. This code is duplicated
+#       for these two expanders, but may not be if other expanders are added to this library. I
+#       therefore  want to keep is separate in these two classes. The line above disables the
+#       pylint check for this.
+
 
 """
 `PCAL9555`
@@ -147,7 +153,7 @@ class PCAL9555(PCA9555):
         """
         output = []
         reg = self.irq_status
-        for i in range(15):
+        for i in range(self.maxpins):
             if ((reg >> i) & 1) == 1:
                 output.append(i)
         return output
@@ -300,6 +306,21 @@ class PCAL9555(PCA9555):
                 "or 'digitalio.DriveMode.OPEN_DRAIN'."
             )
 
+    def get_drive_mode(self, bank):
+        """Reads the output drive of an output bank. All pins in bank 0 (pins 0-7) or
+        1 (pins 8-15) are set to the same mode.
+
+        :param bank:    The bank to set. Should be 0 or 1.
+        :return:        The drive mode. Either 'digitalio.DriveMode.PUSH_PULL'
+                        or 'digitalio.DriveMode.OPEN_DRAIN'.
+        """
+        if (bank > 1) or (bank < 0):
+            raise ValueError("Bank should be either 0 (pins 0-7) or 1 (pins 8-15).")
+
+        if _get_bit(self.out_port_config, bank) == 0x01:
+            return digitalio.DriveMode.OPEN_DRAIN
+        return digitalio.DriveMode.PUSH_PULL
+
     def reset_to_defaults(self):
         """Reset all registers to their default state. This is also
         done with a power cycle, but it can be called by software here.
@@ -378,8 +399,7 @@ class PCAL9555(PCA9555):
 
     @irq_mask.setter
     def irq_mask(self, val):
-        # This register is read only.
-        pass
+        self._write_u16le(_PCAL9555_IRQ_MASK_0, val)
 
     @property
     def irq_status(self):
@@ -388,7 +408,8 @@ class PCAL9555(PCA9555):
 
     @irq_status.setter
     def irq_status(self, val):
-        self._write_u16le(_PCAL9555_IRQ_STATUS_0, val)
+        # This register is read only.
+        pass
 
     @property
     def out_port_config(self):

@@ -70,9 +70,20 @@ class PCA9554(I2c_Expander):
         self.maxpins = 7
         self.capability = _enable_bit(0x00, Capability.INVERT_POL)
         if reset:
-            # Reset to all inputs with no pull-ups and no inverted polarity.
-            self.iodir = 0xFF  # Set all IOs to inputs
-            self.ipol = 0x00  # Set polatiry inversion off for all pins
+            self.reset_to_defaults()
+
+    def reset_to_defaults(self):
+        """Reset all registers to their default state. This is also
+        done with a power cycle, but it can be called by software here.
+
+        :return:        Nothing.
+        """
+        # TODO: Should I make some sort of 'register' class to
+        # handle memory addresses and default states?
+        # Input port register is read only.
+        self.gpio = 0xFF
+        self.ipol = 0x00
+        self.iodir = 0xFF
 
     @property
     def gpio(self):

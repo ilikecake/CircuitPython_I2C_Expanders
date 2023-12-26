@@ -4,9 +4,12 @@
 #
 # SPDX-License-Identifier: MIT
 
-# pylint: disable=too-many-public-methods
+# pylint: disable=too-many-public-methods, duplicate-code
+# Note: there is a bit of duplicated code between this and the PCAL9555. This code is duplicated
+#       for these two expanders, but may not be if other expanders are added to this library. I
+#       therefore  want to keep is separate in these two classes. The line above disables the
+#       pylint check for this.
 
-# TODO: mostly a copy/paste from the PCAL9555, make sure this stuff is still true here.
 """
 `PCAL9554`
 ====================================================
@@ -77,15 +80,190 @@ class PCAL9554(PCA9554):
         super().__init__(
             i2c, address, False
         )  # This initializes the PCA9554 compatible registers.
-        self._capability = (
+        self.capability = (
             _enable_bit(0x00, Capability.PULL_UP)
             | _enable_bit(0x00, Capability.PULL_DOWN)
             | _enable_bit(0x00, Capability.INVERT_POL)
-            | _enable_bit(0x00, Capability.DRIVE_MODE)
         )  # TODO: This device does not really have a capability to set drive mode the way
         # digitalio is expecting. I should probably not set this here.
         if reset:
             self.reset_to_defaults()
+
+    def set_int_pin(self, pin, latch=False):
+        """Enable interrupt on a pin. Interrupts are generally triggered by any state change
+        of the pin. There is an exception to this, see info below on latching for details.
+
+        :param pin:     Pin number to modify.
+        :param latch:   Set to True to enable latching on this interrupt. Defaults to False.
+        :return:        Nothing.
+        """
+        # Validate inputs
+        self._validate_pin(pin)
+        if not isinstance(latch, (bool)):
+            raise ValueError("latch must be True or False")
+
+        self.irq_mask = _clear_bit(self.irq_mask, pin)
+
+        if latch:
+            self.input_latch = _enable_bit(self.input_latch, pin)
+        else:
+            self.input_latch = _clear_bit(self.input_latch, pin)
+
+    def clear_int_pin(self, pin):
+        """Disable interrupts on a pin.
+
+        :param pin:     Pin number to modify.
+        :return:        Nothing.
+        """
+        self._validate_pin(pin)
+        self.irq_mask = _enable_bit(self.irq_mask, pin)
+
+    def get_int_pins(self):
+        """Returns a list of pins causing an interrupt. It is possible for multiple pins
+        to be causing an interrupt. Calling this function will not clear the interrupt state.
+
+        :return:        Returns a list of pin numbers.
+        """
+        output = []
+        reg = self.irq_status
+        for i in range(self.maxpins):
+            if ((reg >> i) & 1) == 1:
+                output.append(i)
+        return output
+
+    def set_int_latch(self, pin):
+        """Set the interrupt on 'pin' to latching operation. Note this does not enable
+        or disable the interrupt or clear the interrupt state.
+
+        :param pin:     Pin number to modify.
+        :return:        Nothing.
+        """
+        self._validate_pin(pin)
+        self.input_latch = _enable_bit(self.input_latch, pin)
+
+    def clear_int_latch(self, pin):
+        """Set the interrupt on 'pin' to non-latching operation. Note this does not enable
+        or disable the interrupt. This does not clear the interrupt state.
+
+        :param pin:     Pin number to modify.
+        :return:        Nothing.
+        """
+        self._validate_pin(pin)
+        self.input_latch = _clear_bit(self.input_latch, pin)
+
+    """Interrupt latch behavior
+        By default (non-latched) if an interrupt enabled pin changes state, but changes back before the GPIO state register is read, the interrupt state
+        will be cleared. Setting the interrupt latch will cause the device to latch on a state change of the input pin. With latching enabled, on a state
+        change to the pin, the interrupt pin will be asserted and will not deassert until the input register is read. The value read from the input register
+        will be the value that caused the interrupt, not nessecarially the current value of the pin. If the pin changed state, but changed back before the
+        input register was read, the changed state will be what is returned in the register. The state change back to the original state will not trigger
+        another interrupt as long as it happens before the input register is read. If the input register is read before the pin state changes back to the
+        original value, both state changes will cause an interrupt.
+    """
+
+    def get_pupd(self, pin):
+        """Checks the state of a pin to see if pull up/down is enabled.
+
+        :param pin:     Pin number to check.
+        :return:        Returns 'digitalio.Pull.UP', 'digitalio.Pull.DOWN' or 'None'
+                        to indicate the state of the pin.
+        """
+        self._validate_pin(pin)
+        # The else statements here are extaneous, but without them, it is harder to tell
+        # what the code is doing. Disable pylint for that error here only.
+        if _get_bit(self.pupd_en, pin):
+            if _get_bit(self.pupd_sel, pin):  # pylint: disable=no-else-return
+                return digitalio.Pull.UP
+            else:
+                return digitalio.Pull.DOWN
+        else:
+            return None
+
+    def set_pupd(self, pin, status):
+        """Sets the state of the pull up/down resistors on a pin.
+
+        :param pin:     Pin number to modify.
+        :param status:  The new state of the pull up/down resistors. Should be one of
+                        'digitalio.Pull.UP', 'digitalio.Pull.DOWN' or 'None'.
+        :return:        Nothing.
+        """
+        self._validate_pin(pin)
+
+        if status is None:
+            self.pupd_en = _clear_bit(self.pupd_en, pin)
+            return
+
+        self.pupd_en = _enable_bit(self.pupd_en, pin)
+
+        if status == digitalio.Pull.UP:
+            self.pupd_sel = _enable_bit(self.pupd_sel, pin)
+        elif status == digitalio.Pull.DOWN:
+            self.pupd_sel = _clear_bit(self.pupd_sel, pin)
+        else:
+            raise ValueError("Expected UP, DOWN, or None for pull state.")
+
+    def set_output_drive(self, pin, drive):
+        """Sets the output drive strength of a pin.
+
+        :param pin:     Pin number to modify.
+        :param drive:   The drive strength value to set. See the class 'Drive_strength'
+                        for valid values to set.
+        :return:        Nothing.
+        """
+        self._validate_pin(pin)
+        # Check inputs to make sure they are valid
+        if (drive > 3) or (drive < 0):
+            raise ValueError("Invalid drive strength value.")
+
+        loc = pin * 2  # Bit location in the register
+        val = drive << loc  # Value to set shifted to the proper location
+        mask = ~(3 << loc) & 0xFFFF  # Mask to clear the two bits we need to set.
+
+        self.out_drive = ((self.out_drive) & (mask)) | val
+
+    def get_output_drive(self, pin):
+        """Reads the drive strength value of the given pin.
+
+        :param pin:     Pin number to check.
+        :return:        The current drive strength. Return values are shown in the
+                        'Drive_strength' class
+        """
+        self._validate_pin(pin)
+
+        val = self.out_drive
+        loc = pin * 2  # Bit location in the register
+        return (val >> loc) & 0x03
+
+    def set_drive_mode(self, mode):
+        """Configures the output drive of the entire output bank. Sets the outputs to either
+        open drain or push-pull. Note that this is not a per-pin setting. All pins are set to the
+        same mode.
+
+        :param mode:    The mode to set. Should be one of either 'digitalio.DriveMode.PUSH_PULL'
+                        or 'digitalio.DriveMode.OPEN_DRAIN'.
+
+        :return:        Nothing.
+        """
+
+        if mode == digitalio.DriveMode.PUSH_PULL:
+            self.out_port_config = _clear_bit(self.out_port_config, 0)
+        elif mode == digitalio.DriveMode.OPEN_DRAIN:
+            self.out_port_config = _enable_bit(self.out_port_config, 0)
+        else:
+            raise ValueError(
+                "Invalid drive mode. It should be either 'digitalio.DriveMode.PUSH_PULL' "
+                "or 'digitalio.DriveMode.OPEN_DRAIN'."
+            )
+
+    def get_drive_mode(self):
+        """Returns the drive mode of the output bank. This is the drive mode of all pins.
+
+        :return:        The drive mode. Either 'digitalio.DriveMode.PUSH_PULL'
+                        or 'digitalio.DriveMode.OPEN_DRAIN'.
+        """
+        if _get_bit(self.out_port_config, 0) == 0x01:
+            return digitalio.DriveMode.OPEN_DRAIN
+        return digitalio.DriveMode.PUSH_PULL
 
     def reset_to_defaults(self):
         """Reset all registers to their default state. This is also
@@ -97,16 +275,38 @@ class PCAL9554(PCA9554):
         #  memory addresses and default states?
         # Input port and interrupt status registers are read only.
         self.gpio = 0xFF
-        self.ipol = 0x0000
+        self.ipol = 0x00
         self.iodir = 0xFF
 
-        # self.out0_drive = 0xFFFF
-        # self.out1_drive = 0xFFFF
-        # self.input_latch = 0x0000
-        # self.pupd_en = 0xFFFF
-        # self.pupd_sel = 0xFFFF
-        # self.irq_mask = 0xFFFF
-        # self.out_port_config = 0x00
+        self.out_drive = 0xFFFF
+        self.input_latch = 0x00
+        self.pupd_en = 0x00  # TODO: 0xFF for PCAL9554, 0x00 for PCAL9538
+        self.pupd_sel = 0xFF
+        self.irq_mask = 0xFF
+        self.out_port_config = 0x00
+
+    """ Low level register access. These functions directly set or read the values of the
+        registers on the device. In general, you should not need to call these
+        functions directly.
+    """
+
+    @property
+    def out_drive(self):
+        """Output drive strength of pins 0-7."""
+        return self._read_u16le(_PCAL9554_OUTPUT_DRIVE_1)
+
+    @out_drive.setter
+    def out_drive(self, val):
+        self._write_u16le(_PCAL9554_OUTPUT_DRIVE_1, val)
+
+    @property
+    def input_latch(self):
+        """Sets latching or non-latching interrupts per pin."""
+        return self._read_u8(_PCAL9554_INPUT_LATCH)
+
+    @input_latch.setter
+    def input_latch(self, val):
+        self._write_u8(_PCAL9554_INPUT_LATCH, val)
 
     @property
     def pupd_en(self):
@@ -126,21 +326,30 @@ class PCAL9554(PCA9554):
     def pupd_sel(self, val):
         self._write_u8(_PCAL9554_PUPD_SEL, val)
 
-    # Enable interrupt on a pin. Interrupts are triggered by any state change of the pin.
-    def set_int_pin(self, pin):
-        """Set interrupt pin"""
-        self._write_u8(
-            _PCAL9554_IRQ_MASK, _clear_bit(self._read_u8(_PCAL9554_IRQ_MASK), pin)
-        )
+    @property
+    def irq_mask(self):
+        """Masks or unmasks pins for generating interrupts."""
+        return self._read_u8(_PCAL9554_IRQ_MASK)
 
-    # Disable interrupts on a pin.
-    def clear_int_pin(self, pin):
-        """Clear interrupt pin"""
-        self._write_u8(
-            _PCAL9554_IRQ_MASK, _enable_bit(self._read_u8(_PCAL9554_IRQ_MASK), pin)
-        )
+    @irq_mask.setter
+    def irq_mask(self, val):
+        self._write_u8(_PCAL9554_IRQ_MASK, val)
 
     @property
-    def get_int_status(self):
-        """Get interrupt status"""
+    def irq_status(self):
+        """Indicates which pin caused an interrupt."""
         return self._read_u8(_PCAL9554_IRQ_STATUS)
+
+    @irq_status.setter
+    def irq_status(self, val):
+        # Regsiter is read only
+        pass
+
+    @property
+    def out_port_config(self):
+        """Sets output banks to open drain or push-pull operation."""
+        return self._read_u8(_PCAL9554_OUTPUT_PORT_CONFIG)
+
+    @out_port_config.setter
+    def out_port_config(self, val):
+        self._write_u8(_PCAL9554_OUTPUT_PORT_CONFIG, val)
