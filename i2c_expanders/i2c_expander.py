@@ -4,7 +4,7 @@
 # SPDX-License-Identifier: MIT
 
 """
-`i2c_expander`
+i2c_expander.py
 ====================================================
 
 The base class for the I2C expanders.
