@@ -18,24 +18,8 @@ Heavily based on the version written by Tony DiCola for the MCP230xx library.
 import digitalio
 from i2c_expanders.helpers import Capability, _get_bit, _enable_bit, _clear_bit
 
-# from i2c_expanders.i2c_expander import Capability
-
 __version__ = "0.0.0+auto.0"
 __repo__ = "https://github.com/ilikecake/CircuitPython_I2C_Expanders.git"
-
-"""
-# Internal helpers to simplify setting and getting a bit inside an integer.
-def _get_bit(val, bit):
-    return val & (1 << bit) > 0
-
-
-def _enable_bit(val, bit):
-    return val | (1 << bit)
-
-
-def _clear_bit(val, bit):
-    return val & ~(1 << bit)
-"""
 
 
 class DigitalInOut:
@@ -58,7 +42,6 @@ class DigitalInOut:
     # is unused by this class).  Do not remove them, instead turn off pylint
     # in this case.
     # pylint: disable=unused-argument
-    # TODO: Check if this is still true...
     def switch_to_output(self, value=False, **kwargs):
         """Switch the pin state to a digital output with the provided starting
         value (True/False for high or low, default is False/low).
@@ -76,7 +59,6 @@ class DigitalInOut:
         self.pull = pull
         self.invert_polarity = invert_polarity
 
-    # TODO: Check if I need these things
     # pylint: enable=unused-argument
 
     @property
@@ -150,43 +132,38 @@ class DigitalInOut:
         ):
             return
 
-        # TODO: What did I mean by this comment?
-        # This function sets the pull up/down resistors.
-        # This may be different for different IO expanders.
         self._ioexp.set_pupd(self._pin, val)
 
     # TODO: Check capability on these
     @property
     def invert_polarity(self):
-        """The polarity of the pin, either True for an Inverted or
-        False for an normal.
-        """
+        """The polarity of the pin, either True for an Inverted or False for an normal."""
+        if not _get_bit(self._ioexp.capability, Capability.INVERT_POL):
+            raise ValueError("Polarity inversion not supported.")
+
         if _get_bit(self._ioexp.ipol, self._pin):
             return True
         return False
 
     @invert_polarity.setter
     def invert_polarity(self, val):
+        if not _get_bit(self._ioexp.capability, Capability.INVERT_POL):
+            raise ValueError("Polarity inversion not supported.")
         if val:
             self._ioexp.ipol = _enable_bit(self._ioexp.ipol, self._pin)
         else:
             self._ioexp.ipol = _clear_bit(self._ioexp.ipol, self._pin)
 
-    # TODO: Not implemented. Not sure if I need these here, the expanders
-    # I am using do not support this capability on a per-pin basis.
+    # TODO: Not implemented. The expanders I am using do not support this.
     @property
     def drive_mode(self):
         """Set the drive mode on expanders that support it. Will raise an error if setting
         drive mode is not supported.
+
+        Not implemented, will raise an error if set/read.
         """
-        if _get_bit(self._ioexp.ipol, self._pin):
-            return True
-        return False
+        raise NotImplementedError("Drive mode setting is not implemented.")
 
     @drive_mode.setter
     def drive_mode(self, val):
-        # TODO: This code is not right. Remove or something
-        if val:
-            self._ioexp.ipol = _enable_bit(self._ioexp.ipol, self._pin)
-        else:
-            self._ioexp.ipol = _clear_bit(self._ioexp.ipol, self._pin)
+        raise NotImplementedError("Drive mode setting is not implemented.")

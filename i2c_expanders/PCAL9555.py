@@ -32,7 +32,27 @@ There are likely other devices that use this same command set and can be used wi
 Where I find them, I will probably make a separate class name to make it obvious what devices are
 supported. A list of other devices that should be compatible is below.
 
+:Note: By default if an (non-latched) interrupt enabled pin changes state, but changes back before
+       the GPIO state register is read, the interrupt state will be cleared. Setting the interrupt
+       latch will cause the device to latch on a state change of the input pin. With latching
+       enabled, on a state change to the pin, the interrupt pin will be asserted and will not
+       deassert until the input register is read. The value read from the input register will be
+       the value that caused the interrupt, not nessecarially the current value of the pin. If the
+       pin changed state, but changed back before the input register was read, the changed state
+       will be what is returned in the register. The state change back to the original state will
+       not trigger another interrupt as long as it happens before the input register is read. If
+       the input register is read before the pin state changes back to the original value, both
+       state changes will cause an interrupt.
+
+Required library files:
+* PCAL9555.py
+* PCA9555.py
+* i2c_expander.py
+* digital_inout.py
+* helpers.py
+
 Compatible Devices
+
 * PCAL9555
 * TODO
 
@@ -42,21 +62,16 @@ Heavily based on the code written by Tony DiCola for the MCP230xx library.
 """
 
 from micropython import const
-import digitalio  # import DigitalInOut	#TODO: Do i need this??
+import digitalio
 
-from i2c_expanders.PCA9555 import (
-    PCA9555,
-)  # removed relative import, might need this again if this is a module??
-
-# from i2c_expanders.i2c_expander import Capability
+from i2c_expanders.PCA9555 import PCA9555
 from i2c_expanders.helpers import Capability, _get_bit, _enable_bit, _clear_bit
 
 __version__ = "0.0.0+auto.0"
 __repo__ = "https://github.com/ilikecake/CircuitPython_I2C_Expanders.git"
 
-# TODO: this will probably change based on the device used. Not sure how to deal with this.
-# Maybe remove the default and force the user to specify the address?
-_PCAL9555_ADDRESS = const(0x27)
+# This is the default address for the PCA9554 with all addr pins grounded.
+_PCAL9555_DEFAULT_ADDRESS = const(0x20)
 
 # Registers specific to the PCAL9555 devices. This device also inherits the registers
 # from the PCA9555
@@ -101,17 +116,13 @@ class PCAL9555(PCA9555):
     from the PCA9555 work without updates. The PCAL device added capability is defined below.
     """
 
-    def __init__(self, i2c, address=_PCAL9555_ADDRESS, reset=True):
-        super().__init__(
-            i2c, address, False
-        )  # This initializes the PCA9555 compatible registers.
-        # TODO: This device does not really have a capability to set drive mode the way
-        #  digitalio is expecting. I should probably not set this here.
-        self.capability = (
+    def __init__(self, i2c, address=_PCAL9555_DEFAULT_ADDRESS, reset=True):
+        # Initialize the PCA9555 compatible registers.
+        super().__init__(i2c, address, False)
+        self._capability = (
             _enable_bit(0x00, Capability.PULL_UP)
             | _enable_bit(0x00, Capability.PULL_DOWN)
             | _enable_bit(0x00, Capability.INVERT_POL)
-            | _enable_bit(0x00, Capability.DRIVE_MODE)
         )
         if reset:
             self.reset_to_defaults()
@@ -145,6 +156,26 @@ class PCAL9555(PCA9555):
         self._validate_pin(pin)
         self.irq_mask = _enable_bit(self.irq_mask, pin)
 
+    def get_interrupts(self):
+        """Returns a list of pins causing an interruptn along with the value of those pins.
+        It is possible for multiple pins to be causing an interrupt. Calling this function
+        clears the interrupt state.
+
+        :return:        Returns a list of dicts containing items "pin" and "value". If no
+                        interrupts are triggered, this function returns none.
+        """
+        output = []
+        int_status = self.irq_status
+        pin_values = self.gpio
+
+        for i in range(self.maxpins):
+            if bool((int_status >> i) & 1):
+                pin_val = bool(((pin_values >> i) & 1))
+                output.append({"pin": i, "value": pin_val})
+        if not output:
+            return None
+        return output
+
     def get_int_pins(self):
         """Returns a list of pins causing an interrupt. It is possible for multiple pins
         to be causing an interrupt. Calling this function will not clear the interrupt state.
@@ -177,16 +208,6 @@ class PCAL9555(PCA9555):
         """
         self._validate_pin(pin)
         self.input_latch = _clear_bit(self.input_latch, pin)
-
-    """Interrupt latch behavior
-        By default (non-latched) if an interrupt enabled pin changes state, but changes back before the GPIO state register is read, the interrupt state
-        will be cleared. Setting the interrupt latch will cause the device to latch on a state change of the input pin. With latching enabled, on a state
-        change to the pin, the interrupt pin will be asserted and will not deassert until the input register is read. The value read from the input register
-        will be the value that caused the interrupt, not nessecarially the current value of the pin. If the pin changed state, but changed back before the
-        input register was read, the changed state will be what is returned in the register. The state change back to the original state will not trigger
-        another interrupt as long as it happens before the input register is read. If the input register is read before the pin state changes back to the
-        original value, both state changes will cause an interrupt.
-    """
 
     def get_pupd(self, pin):
         """Checks the state of a pin to see if pull up/down is enabled.
@@ -349,7 +370,11 @@ class PCAL9555(PCA9555):
 
     @property
     def out0_drive(self):
-        """Output drive strength of bank 0 (pins 0-7)."""
+        """The raw 'output drive strength 0' register. Controls the drive strength of bank 0
+        (pins 0-7). Read and written as a 16 bit number.
+
+        Register address: 0x40, 0x41.
+        """
         return self._read_u16le(_PCAL9555_OUTPUT_DRIVE_0_0)
 
     @out0_drive.setter
@@ -358,7 +383,11 @@ class PCAL9555(PCA9555):
 
     @property
     def out1_drive(self):
-        """Output drive strength of bank 1 (pins 8-15)."""
+        """The raw 'output drive strength 1' register. Controls the drive strength of bank 1
+        (pins 8-15). Read and written as a 16 bit number.
+
+        Register address: 0x42, 0x43.
+        """
         return self._read_u16le(_PCAL9555_OUTPUT_DRIVE_1_0)
 
     @out1_drive.setter
@@ -367,7 +396,12 @@ class PCAL9555(PCA9555):
 
     @property
     def input_latch(self):
-        """Sets latching or non-latching interrupts per pin."""
+        """The raw 'input latch' register. Each bit represents the latch configuration for the
+        matching pin. A zero indicates that the corresponding input pin is not latched. Read and
+        written as a 16 bit number.
+
+        Register address: 0x44, 0x45.
+        """
         return self._read_u16le(_PCAL9555_INPUT_LATCH_0)
 
     @input_latch.setter
@@ -376,7 +410,14 @@ class PCAL9555(PCA9555):
 
     @property
     def pupd_en(self):
-        """Enables pull up/down resistors per pin."""
+        """The raw 'pull-up/pull-down enable' register. Each bit represents the enabled state of
+        the pull up/down resistors for that pin. A one indicates that the pull up/down resistors
+        are enabled. The selection of pull-up vs pull-down is done with the 'pull-up/pull-down
+        selection register'. A zero indicates that the pull up/down resistors are disconnected.
+        Read and written as a 16 bit number.
+
+        Register address: 0x46, 0x47.
+        """
         return self._read_u16le(_PCAL9555_PUPD_EN_0)
 
     @pupd_en.setter
@@ -385,7 +426,13 @@ class PCAL9555(PCA9555):
 
     @property
     def pupd_sel(self):
-        """Sets a pull up or pull down resistor per pin."""
+        """The raw 'pull-up/pull-down selection' register. Each bit enables either a pull-up or
+        pull-down resistor on that corresponding pin. A one selects a pull-up and a zero selects a
+        pull-down. Internal pull up/down resistors are ~100 KOhm  (+/-50 KOhm). Read and written as
+        a 16 bit number.
+
+        Register address: 0x48, 0x49.
+        """
         return self._read_u16le(_PCAL9555_PUPD_SEL_0)
 
     @pupd_sel.setter
@@ -394,7 +441,12 @@ class PCAL9555(PCA9555):
 
     @property
     def irq_mask(self):
-        """Masks or unmasks pins for generating interrupts."""
+        """The raw 'interrupt mask' register. Setting a bit to one will mask interrupts on that
+        corresponding pin. All interrupts are masked by default. Read and written as a 16 bit
+        number.
+
+        Register address: 0x4A, 0x4B.
+        """
         return self._read_u16le(_PCAL9555_IRQ_MASK_0)
 
     @irq_mask.setter
@@ -403,7 +455,13 @@ class PCAL9555(PCA9555):
 
     @property
     def irq_status(self):
-        """Indicates which pin caused an interrupt."""
+        """The raw 'interrupt status' register. Reading this register will tell the source of an
+        interrupt. A one read from a bit in this register indicates that the corresponding pin
+        caused the interrupt. This register is read only. Reading from this register does not clear
+        the interrupt state. Read and written as a 16 bit number.
+
+        Register address: 0x4C, 0x4D.
+        """
         return self._read_u16le(_PCAL9555_IRQ_STATUS_0)
 
     @irq_status.setter
@@ -413,9 +471,16 @@ class PCAL9555(PCA9555):
 
     @property
     def out_port_config(self):
-        """Sets output banks to open drain or push-pull operation."""
+        """The raw 'output port configuration' register. Use this register to set the output banks
+        to either open-drain or push-pull operation. Bit zero controls bank 0 (pins 0-7) and bit
+        1 controls bank 1 (pins 8-15). Set the corresponding bit to zero to set that bank to
+        push-pull. Set to one to configure the bank as open-drain. All other bits are reserved.
+        Read and written as a 8 bit number.
+
+        Register address: 0x4F.
+        """
         return self._read_u8(_PCAL9555_OUTPUT_PORT_CONFIG)
 
     @out_port_config.setter
     def out_port_config(self, val):
-        self._write_u8(_PCAL9555_OUTPUT_PORT_CONFIG, val)
+        self._write_u8((_PCAL9555_OUTPUT_PORT_CONFIG & 0x03), val)

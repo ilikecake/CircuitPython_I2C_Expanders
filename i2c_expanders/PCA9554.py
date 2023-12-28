@@ -36,23 +36,25 @@ Compatible Devices
 * PCA9538
 * TODO
 
+Note: Some devices have the same command set and register, but different i2c addresses and register
+defaults. These devices should work fine with this class, but make sure the addresses are set right
+when initializing them.
+
 Heavily based on the code written by Tony DiCola for the MCP230xx library.
 
 * Author(s): Pat Satyshur
 """
 
 # TODO: Fix these imports.
-from micropython import (
-    const,
-)  # TODO: What does const get me in this situation? Can I remove it?
+from micropython import const
 from i2c_expanders.i2c_expander import I2c_Expander
 from i2c_expanders.helpers import _enable_bit, Capability
 
 __version__ = "0.0.0+auto.0"
 __repo__ = "https://github.com/ilikecake/CircuitPython_I2C_Expanders.git"
 
-# TODO: probably don't want this here.
-_PCA9554_ADDRESS = const(0x27)
+# This is the default address for the PCA9554 with all addr pins grounded.
+_PCA9554_DEFAULT_ADDRESS = const(0x20)
 
 _PCA9554_INPUT = const(0x00)  # Input register
 _PCA9554_OUTPUT = const(0x01)  # Output register
@@ -65,10 +67,10 @@ class PCA9554(I2c_Expander):
     at the specified I2C address.
     """
 
-    def __init__(self, i2c, address=_PCA9554_ADDRESS, reset=True):
+    def __init__(self, i2c, address=_PCA9554_DEFAULT_ADDRESS, reset=True):
         super().__init__(i2c, address)
-        self.maxpins = 7
-        self.capability = _enable_bit(0x00, Capability.INVERT_POL)
+        self._maxpins = 7
+        self._capability = _enable_bit(0x00, Capability.INVERT_POL)
         if reset:
             self.reset_to_defaults()
 
@@ -78,8 +80,6 @@ class PCA9554(I2c_Expander):
 
         :return:        Nothing.
         """
-        # TODO: Should I make some sort of 'register' class to
-        # handle memory addresses and default states?
         # Input port register is read only.
         self.gpio = 0xFF
         self.ipol = 0x00
@@ -87,9 +87,14 @@ class PCA9554(I2c_Expander):
 
     @property
     def gpio(self):
-        """The raw GPIO output register.  Each bit represents the
-        output value of the associated pin (0 = low, 1 = high), assuming that
-        pin has been configured as an output previously.
+        """The raw GPIO port registers.  Each bit represents the value of the associated pin
+        (0 = low, 1 = high). Read this register to get the value of all pins. Write to this
+        register to set the value of any pins configured as outputs.
+        Read and written as a 8 bit number.
+
+        Register address (read):  0x00
+
+        Register address (write): 0x01
         """
         return self._read_u8(_PCA9554_INPUT)
 
@@ -98,24 +103,28 @@ class PCA9554(I2c_Expander):
         self._write_u8(_PCA9554_OUTPUT, val)
 
     @property
-    def iodir(self):
-        """The raw IODIR direction register.  Each bit represents
-        direction of a pin, either 1 for an input or 0 for an output mode.
-        """
-        return self._read_u8(_PCA9554_IODIR)
-
-    @iodir.setter
-    def iodir(self, val):
-        self._write_u8(_PCA9554_IODIR, val)
-
-    @property
     def ipol(self):
-        """The raw IPOL output register.  Each bit represents the
-        polarity value of the associated pin (0 = normal, 1 = inverted), assuming that
-        pin has been configured as an input previously.
+        """The raw 'polarity inversion' register. Each bit represents the polarity value of the
+        associated pin (0 = normal, 1 = inverted). This only applies to pins configured as inputs.
+        Read and written as a 8 bit number.
+
+        Register address: 0x02
         """
         return self._read_u8(_PCA9554_IPOL)
 
     @ipol.setter
     def ipol(self, val):
         self._write_u8(_PCA9554_IPOL, val)
+
+    @property
+    def iodir(self):
+        """The raw pin configuration register. Each bit represents direction of a pin, either 1
+        for an input or 0 for an output. Read and written as a 8 bit number.
+
+        Register address: 0x03
+        """
+        return self._read_u8(_PCA9554_IODIR)
+
+    @iodir.setter
+    def iodir(self, val):
+        self._write_u8(_PCA9554_IODIR, val)

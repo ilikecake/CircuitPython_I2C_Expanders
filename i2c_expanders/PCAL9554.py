@@ -36,6 +36,22 @@ Compatible Devices
 * PCAL9538
 * TODO
 
+Note: Some devices have the same command set and register, but different i2c addresses and register
+defaults. These devices should work fine with this class, but make sure the addresses are set right
+when initializing them.
+
+:Note: By default if an (non-latched) interrupt enabled pin changes state, but changes back before
+       the GPIO state register is read, the interrupt state will be cleared. Setting the interrupt
+       latch will cause the device to latch on a state change of the input pin. With latching
+       enabled, on a state change to the pin, the interrupt pin will be asserted and will not
+       deassert until the input register is read. The value read from the input register will be
+       the value that caused the interrupt, not nessecarially the current value of the pin. If the
+       pin changed state, but changed back before the input register was read, the changed state
+       will be what is returned in the register. The state change back to the original state will
+       not trigger another interrupt as long as it happens before the input register is read. If
+       the input register is read before the pin state changes back to the original value, both
+       state changes will cause an interrupt.
+
 Heavily based on the code written by Tony DiCola for the MCP230xx library.
 
 * Author(s): Pat Satyshur
@@ -80,12 +96,12 @@ class PCAL9554(PCA9554):
         super().__init__(
             i2c, address, False
         )  # This initializes the PCA9554 compatible registers.
-        self.capability = (
+        self._capability = (
             _enable_bit(0x00, Capability.PULL_UP)
             | _enable_bit(0x00, Capability.PULL_DOWN)
             | _enable_bit(0x00, Capability.INVERT_POL)
-        )  # TODO: This device does not really have a capability to set drive mode the way
-        # digitalio is expecting. I should probably not set this here.
+        )
+
         if reset:
             self.reset_to_defaults()
 
@@ -117,6 +133,26 @@ class PCAL9554(PCA9554):
         """
         self._validate_pin(pin)
         self.irq_mask = _enable_bit(self.irq_mask, pin)
+
+    def get_interrupts(self):
+        """Returns a list of pins causing an interruptn along with the value of those pins.
+        It is possible for multiple pins to be causing an interrupt. Calling this function
+        clears the interrupt state.
+
+        :return:        Returns a list of dicts containing items "pin" and "value". If no
+                        interrupts are triggered, this function returns none.
+        """
+        output = []
+        int_status = self.irq_status
+        pin_values = self.gpio
+
+        for i in range(self.maxpins):
+            if bool((int_status >> i) & 1):
+                pin_val = bool(((pin_values >> i) & 1))
+                output.append({"pin": i, "value": pin_val})
+        if not output:
+            return None
+        return output
 
     def get_int_pins(self):
         """Returns a list of pins causing an interrupt. It is possible for multiple pins
@@ -150,16 +186,6 @@ class PCAL9554(PCA9554):
         """
         self._validate_pin(pin)
         self.input_latch = _clear_bit(self.input_latch, pin)
-
-    """Interrupt latch behavior
-        By default (non-latched) if an interrupt enabled pin changes state, but changes back before the GPIO state register is read, the interrupt state
-        will be cleared. Setting the interrupt latch will cause the device to latch on a state change of the input pin. With latching enabled, on a state
-        change to the pin, the interrupt pin will be asserted and will not deassert until the input register is read. The value read from the input register
-        will be the value that caused the interrupt, not nessecarially the current value of the pin. If the pin changed state, but changed back before the
-        input register was read, the changed state will be what is returned in the register. The state change back to the original state will not trigger
-        another interrupt as long as it happens before the input register is read. If the input register is read before the pin state changes back to the
-        original value, both state changes will cause an interrupt.
-    """
 
     def get_pupd(self, pin):
         """Checks the state of a pin to see if pull up/down is enabled.
@@ -292,7 +318,11 @@ class PCAL9554(PCA9554):
 
     @property
     def out_drive(self):
-        """Output drive strength of pins 0-7."""
+        """The raw 'output drive strength' register. Controls the drive strength of the pins.
+        Read and written as a 16 bit number.
+
+        Register address: 0x40, 0x41.
+        """
         return self._read_u16le(_PCAL9554_OUTPUT_DRIVE_1)
 
     @out_drive.setter
@@ -301,7 +331,12 @@ class PCAL9554(PCA9554):
 
     @property
     def input_latch(self):
-        """Sets latching or non-latching interrupts per pin."""
+        """The raw 'input latch' register. Each bit represents the latch configuration for the
+        matching pin. A zero indicates that the corresponding input pin is not latched. Read and
+        written as a 8 bit number.
+
+        Register address: 0x42.
+        """
         return self._read_u8(_PCAL9554_INPUT_LATCH)
 
     @input_latch.setter
@@ -310,7 +345,14 @@ class PCAL9554(PCA9554):
 
     @property
     def pupd_en(self):
-        """reads the pull up/down status"""
+        """The raw 'pull-up/pull-down enable' register. Each bit represents the enabled state of
+        the pull up/down resistors for that pin. A one indicates that the pull up/down resistors
+        are enabled. The selection of pull-up vs pull-down is done with the 'pull-up/pull-down
+        selection register'. A zero indicates that the pull up/down resistors are disconnected.
+        Read and written as a 8 bit number.
+
+        Register address: 0x43.
+        """
         return self._read_u8(_PCAL9554_PUPD_EN)
 
     @pupd_en.setter
@@ -319,7 +361,13 @@ class PCAL9554(PCA9554):
 
     @property
     def pupd_sel(self):
-        """reads the pull up/down status"""
+        """The raw 'pull-up/pull-down selection' register. Each bit enables either a pull-up or
+        pull-down resistor on that corresponding pin. A one selects a pull-up and a zero selects a
+        pull-down. Internal pull up/down resistors are ~100 KOhm  (+/-50 KOhm). Read and written as
+        a 8 bit number.
+
+        Register address: 0x44.
+        """
         return self._read_u8(_PCAL9554_PUPD_SEL)
 
     @pupd_sel.setter
@@ -328,7 +376,12 @@ class PCAL9554(PCA9554):
 
     @property
     def irq_mask(self):
-        """Masks or unmasks pins for generating interrupts."""
+        """The raw 'interrupt mask' register. Setting a bit to one will mask interrupts on that
+        corresponding pin. All interrupts are masked by default. Read and written as a 8 bit
+        number.
+
+        Register address: 0x45.
+        """
         return self._read_u8(_PCAL9554_IRQ_MASK)
 
     @irq_mask.setter
@@ -337,7 +390,13 @@ class PCAL9554(PCA9554):
 
     @property
     def irq_status(self):
-        """Indicates which pin caused an interrupt."""
+        """The raw 'interrupt status' register. Reading this register will tell the source of an
+        interrupt. A one read from a bit in this register indicates that the corresponding pin
+        caused the interrupt. This register is read only. Reading from this register does not clear
+        the interrupt state. Read and written as a 8 bit number.
+
+        Register address: 0x46.
+        """
         return self._read_u8(_PCAL9554_IRQ_STATUS)
 
     @irq_status.setter
@@ -347,9 +406,15 @@ class PCAL9554(PCA9554):
 
     @property
     def out_port_config(self):
-        """Sets output banks to open drain or push-pull operation."""
+        """The raw 'output port configuration' register. Use bit zero of this register to set the
+        output pins to either open-drain or push-pull operation. Set the bit to zero to configure
+        the pins as push-pull. Set to one to configure the pins as open-drain. All other bits are
+        reserved. Read and written as a 8 bit number.
+
+        Register address: 0x4F.
+        """
         return self._read_u8(_PCAL9554_OUTPUT_PORT_CONFIG)
 
     @out_port_config.setter
     def out_port_config(self, val):
-        self._write_u8(_PCAL9554_OUTPUT_PORT_CONFIG, val)
+        self._write_u8((_PCAL9554_OUTPUT_PORT_CONFIG & 0x01), val)

@@ -76,16 +76,31 @@ class PCA9555(I2c_Expander):
 
     def __init__(self, i2c, address=_PCA9555_ADDRESS, reset=True):
         super().__init__(i2c, address)
-        self.maxpins = 15
-        self.capability = _enable_bit(0x00, Capability.INVERT_POL)
+        self._maxpins = 15
+        self._capability = _enable_bit(0x00, Capability.INVERT_POL)
         if reset:
             self.reset_to_defaults()
 
+    def reset_to_defaults(self):
+        """Reset all registers to their default state. This is also
+        done with a power cycle, but it can be called by software here.
+
+        :return:        Nothing.
+        """
+        self.gpio = 0xFFFF
+        self.ipol = 0x0000
+        self.iodir = 0xFFFF
+
     @property
     def gpio(self):
-        """The raw GPIO output register.  Each bit represents the
-        output value of the associated pin (0 = low, 1 = high), assuming that
-        pin has been configured as an output previously.
+        """The raw GPIO port registers.  Each bit represents the value of the associated pin
+        (0 = low, 1 = high). Read this register to get the value of all pins. Write to this
+        register to set the value of any pins configured as outputs.
+        Read and written as a 16 bit number.
+
+        Register address (read):  0x00, 0x01
+
+        Register address (write): 0x02, 0x03
         """
         return self._read_u16le(_PCA9555_INPUT0)
 
@@ -94,37 +109,28 @@ class PCA9555(I2c_Expander):
         self._write_u16le(_PCA9555_OUTPUT0, val)
 
     @property
-    def iodir(self):
-        """The raw IODIR direction register.  Each bit represents
-        direction of a pin, either 1 for an input or 0 for an output mode.
-        """
-        return self._read_u16le(_PCA9555_IODIR0)
-
-    @iodir.setter
-    def iodir(self, val):
-        self._write_u16le(_PCA9555_IODIR0, val)
-
-    def reset_to_defaults(self):
-        """Reset all registers to their default state. This is also
-        done with a power cycle, but it can be called by software here.
-
-        :return:        Nothing.
-        """
-        # TODO: Should I make some sort of 'register' class to
-        # handle memory addresses and default states?
-        # Input port register is read only.
-        self.gpio = 0xFFFF
-        self.ipol = 0x0000
-        self.iodir = 0xFFFF
-
-    @property
     def ipol(self):
-        """The raw IPOL output register.  Each bit represents the
-        polarity value of the associated pin (0 = normal, 1 = inverted), assuming that
-        pin has been configured as an input previously.
+        """The raw 'polarity inversion' register. Each bit represents the polarity value of the
+        associated pin (0 = normal, 1 = inverted). This only applies to pins configured as inputs.
+        Read and written as a 16 bit number.
+
+        Register address: 0x04, 0x05
         """
         return self._read_u16le(_PCA9555_IPOL0)
 
     @ipol.setter
     def ipol(self, val):
         self._write_u16le(_PCA9555_IPOL0, val)
+
+    @property
+    def iodir(self):
+        """The raw pin configuration register. Each bit represents direction of a pin, either 1
+        for an input or 0 for an output. Read and written as a 16 bit number.
+
+        Register address: 0x06, 0x07
+        """
+        return self._read_u16le(_PCA9555_IODIR0)
+
+    @iodir.setter
+    def iodir(self, val):
+        self._write_u16le(_PCA9555_IODIR0, val)
