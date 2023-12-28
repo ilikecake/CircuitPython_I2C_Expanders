@@ -30,7 +30,7 @@ extensions = [
 autodoc_mock_imports = ["digitalio", "adafruit_bus_device", "i2c_device", "micropython"]
 
 autodoc_preserve_defaults = True
-
+autodoc_member_order = "bysource"
 
 intersphinx_mapping = {
     "python": ("https://docs.python.org/3", None),

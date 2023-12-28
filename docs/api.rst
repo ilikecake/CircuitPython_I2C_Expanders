@@ -4,7 +4,24 @@
 .. If your library file(s) are nested in a directory (e.g. /adafruit_foo/foo.py)
 .. use this format as the module name: "adafruit_foo.foo"
 
-.. automodule:: i2c_expanders
+.. automodule:: i2c_expanders.PCA9555
+    :show-inheritance:
+    :inherited-members:
+    :members:
+
+.. automodule:: i2c_expanders.PCAL9555
+    :show-inheritance:
+    :inherited-members:
+    :members:
+
+.. automodule:: i2c_expanders.PCA9554
+    :show-inheritance:
+    :inherited-members:
+    :members:
+
+.. automodule:: i2c_expanders.PCAL9554
+    :show-inheritance:
+    :inherited-members:
     :members:
 
 .. automodule:: i2c_expanders.i2c_expander
@@ -14,16 +31,4 @@
     :members:
 
 .. automodule:: i2c_expanders.helpers
-    :members:
-
-.. automodule:: i2c_expanders.PCA9555
-    :members:
-
-.. automodule:: i2c_expanders.PCAL9555
-    :members:
-
-.. automodule:: i2c_expanders.PCA9554
-    :members:
-
-.. automodule:: i2c_expanders.PCAL9554
     :members:
