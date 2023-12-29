@@ -28,9 +28,21 @@ Added features of these expanders include:
 * Latching interrupt option
 * Per bank push-pull/open drain pin setup.
 
-There are likely other devices that use this same command set and can be used with this class.
-Where I find them, I will probably make a separate class name to make it obvious what devices are
-supported. A list of other devices that should be compatible is below.
+Required library files (.py or their .mpy equivalent):
+
+* PCAL9555.py
+* PCA9555.py
+* i2c_expander.py
+* digital_inout.py
+* helpers.py
+
+Compatible Devices
+
+* PCAL9555
+
+These are devices I have specifically tested and know work. There appear to be a lot more devices
+with similar naming schemes that use the same register map. These should also be compatible, but
+make sure you check the i2c address and default register state.
 
 :Note: By default if an (non-latched) interrupt enabled pin changes state, but changes back before
        the GPIO state register is read, the interrupt state will be cleared. Setting the interrupt
@@ -43,18 +55,6 @@ supported. A list of other devices that should be compatible is below.
        not trigger another interrupt as long as it happens before the input register is read. If
        the input register is read before the pin state changes back to the original value, both
        state changes will cause an interrupt.
-
-Required library files:
-* PCAL9555.py
-* PCA9555.py
-* i2c_expander.py
-* digital_inout.py
-* helpers.py
-
-Compatible Devices
-
-* PCAL9555
-* TODO
 
 Heavily based on the code written by Tony DiCola for the MCP230xx library.
 
@@ -70,7 +70,7 @@ from i2c_expanders.helpers import Capability, _get_bit, _enable_bit, _clear_bit
 __version__ = "0.0.0+auto.0"
 __repo__ = "https://github.com/ilikecake/CircuitPython_I2C_Expanders.git"
 
-# This is the default address for the PCA9554 with all addr pins grounded.
+# This is the default address for the PCAL9555 with all addr pins grounded.
 _PCAL9555_DEFAULT_ADDRESS = const(0x20)
 
 # Registers specific to the PCAL9555 devices. This device also inherits the registers
@@ -112,8 +112,8 @@ Drive_Strength = DriveStrength()
 
 
 class PCAL9555(PCA9555):
-    """PACL9555 is a compatible with all PCA9555 functions and definitions. All functions
-    from the PCA9555 work without updates. The PCAL device added capability is defined below.
+    """The class for the PCAL9555 expander. Instantiate one of these for each expander on the bus.
+    Make sure you get the address right.
     """
 
     def __init__(self, i2c, address=_PCAL9555_DEFAULT_ADDRESS, reset=True):

@@ -26,11 +26,7 @@ __repo__ = "https://github.com/ilikecake/CircuitPython_I2C_Expanders.git"
 # pylint: disable=too-few-public-methods
 class I2c_Expander:
     """Base class for I2C GPIO expander devices. This class has basic read and write functions that
-    are common to all i2c expanders. This class should never be used directly
-
-    :param maxpins: Number of pins in the expander. Starts at 0.
-    :type maxpins: interger
-
+    are common to all i2c expanders. This class should never be used directly.
     """
 
     def __init__(self, bus_device, address):

@@ -24,19 +24,25 @@ __repo__ = "https://github.com/ilikecake/CircuitPython_I2C_Expanders.git"
 
 class DigitalInOut:
     """The interface is exactly the same as the digitalio.DigitalInOut
-       class. However Some devices do not support pull up/down resistors
-       or setting the pin to open drain.
+    class. However Some devices do not support pull up/down resistors
+    or setting the pin to open drain.
+
+    :param pin_number: The pin number. Starts at zero.
+    :type pin_number: int
+
+    :param ioexpander_class: The I2c expander class object.
+    :type ioexpander_class: gpio class object
 
     Exceptions will be thrown when attempting to set unsupported configurations.
     """
 
     def __init__(self, pin_number, ioexpander_class):
-        """Specify the pin number of the expander and pass the class object.
-        Pin numbers start a 0.
-        """
         self._pin = pin_number
         self._ioexp = ioexpander_class
 
+    # TODO: Not sure if this is still true. Can't we just use the same arguments as the 'real'
+    # DigitalInout class expects, and then not use the ones we don't need? Leaving it along for now.
+    #
     # kwargs in switch functions below are _necessary_ for compatibility
     # with DigitalInout class (which allows specifying pull, etc. which
     # is unused by this class).  Do not remove them, instead turn off pylint

@@ -25,40 +25,37 @@ The PCA9555 is a basic 16 pin I2C expander.
 Use this class if you are using a PCA9555 or compatible expander. This class is also used
 as the base class for the PCAL9555 expander.
 
-There are likely other devices that use this same command set and can be used with this class.
-Where I find them, I will probably make a separate class name to make it obvious what devices are
-supported. A list of other devices that should be compatible is below.
+Required library files (.py or their .mpy equivalent):
+
+* PCA9555.py
+* i2c_expander.py
+* digital_inout.py
+* helpers.py
 
 Compatible Devices
 
 * PCA9555
-* TODO
+
+These are devices I have specifically tested and know work. There appear to be a lot more devices
+with similar naming schemes that use the same register map. These should also be compatible, but
+make sure you check the i2c address and default register state.
 
 Heavily based on the code written by Tony DiCola for the MCP230xx library.
 
 * Author(s): Pat Satyshur
 """
 
-# DriveMode: PUSH_PULL vs OPEN_DRAIN
-# Pull: Pull.Up vs Pull.DOWN vs None
-# TODO: Handle interrupts in here somewhere
+from micropython import const
 
-from micropython import (
-    const,
-)  # TODO: What does const get me in this situation? Can I remove it?
 from i2c_expanders.i2c_expander import I2c_Expander
 from i2c_expanders.helpers import _enable_bit, Capability
-
-# from i2c_expanders.digital_inout import _enable_bit
 
 __version__ = "0.0.0+auto.0"
 __repo__ = "https://github.com/ilikecake/CircuitPython_I2C_Expanders.git"
 
-# TODO: this will probably change based on the device used.
-# Not sure how to deal with this. Maybe remove the default and
-# force the user to specify the address?
+# This is the default address for the PCA9555 with all addr pins grounded.
+_PCA9555_DEFAULT_ADDRESS = const(0x20)
 
-_PCA9555_ADDRESS = const(0x20)
 _PCA9555_INPUT0 = const(0x00)  # Input register 0
 _PCA9555_INPUT1 = const(0x01)  # Input register 1
 _PCA9555_OUTPUT0 = const(0x02)  # Output register 0
@@ -70,11 +67,11 @@ _PCA9555_IODIR1 = const(0x07)  # Configuration (direction) register 1
 
 
 class PCA9555(I2c_Expander):
-    """Supports PCA9555 instance on specified I2C bus and optionally
-    at the specified I2C address.
+    """The class for the PCA9555 expander. Instantiate one of these for each expander on the bus.
+    Make sure you get the address right.
     """
 
-    def __init__(self, i2c, address=_PCA9555_ADDRESS, reset=True):
+    def __init__(self, i2c, address=_PCA9555_DEFAULT_ADDRESS, reset=True):
         super().__init__(i2c, address)
         self._maxpins = 15
         self._capability = _enable_bit(0x00, Capability.INVERT_POL)

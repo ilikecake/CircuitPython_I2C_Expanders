@@ -26,19 +26,21 @@ The PCA9554 is a basic 8 pin I2C expander.
 Use this class if you are using a PCA9554 or compatible expander. This class is also used
 as the base class for the PCAL9554 expander.
 
-There are likely other devices that use this same command set and can be used with this class.
-Where I find them, I will probably make a separate class name to make it obvious what devices are
-supported. A list of other devices that should be compatible is below.
+Required library files (.py or their .mpy equivalent):
+
+* PCA9554.py
+* i2c_expander.py
+* digital_inout.py
+* helpers.py
 
 Compatible Devices
 
 * PCA9554
 * PCA9538
-* TODO
 
-Note: Some devices have the same command set and register, but different i2c addresses and register
-defaults. These devices should work fine with this class, but make sure the addresses are set right
-when initializing them.
+These are devices I have specifically tested and know work. There appear to be a lot more devices
+with similar naming schemes that use the same register map. These should also be compatible, but
+make sure you check the i2c address and default register state.
 
 Heavily based on the code written by Tony DiCola for the MCP230xx library.
 
@@ -63,8 +65,8 @@ _PCA9554_IODIR = const(0x03)  # Configuration (direction) register
 
 
 class PCA9554(I2c_Expander):
-    """Supports PCA9554 instance on specified I2C bus and optionally
-    at the specified I2C address.
+    """The class for the PCA9554 expander. Instantiate one of these for each expander on the bus.
+    Make sure you get the address right.
     """
 
     def __init__(self, i2c, address=_PCA9554_DEFAULT_ADDRESS, reset=True):

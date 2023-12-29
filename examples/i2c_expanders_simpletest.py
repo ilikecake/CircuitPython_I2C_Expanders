@@ -3,9 +3,13 @@
 #
 # SPDX-License-Identifier: Unlicense
 
+# Make sure to change the code based on the expander type you are using.
+
 import time
 import board
 import digitalio
+
+# Change this if you are not using a PCAL9555
 from i2c_expanders.PCAL9555 import PCAL9555
 
 # To use default I2C bus (most boards)
@@ -15,6 +19,7 @@ i2c = board.I2C()  # uses board.SCL and board.SDA
 PCAL9555_Address = 0x20
 
 # Initialize the device and get pins
+# Change this if you are not using a PCAL9555
 IOEXP1_dev = PCAL9555.PCAL9555(i2c, address=PCAL9555_Address)
 pin0 = IOEXP1_dev.get_pin(0)
 pin1 = IOEXP1_dev.get_pin(1)

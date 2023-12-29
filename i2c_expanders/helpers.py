@@ -13,6 +13,7 @@ These are a bunch of helper functions that are collected here to avoid circular 
 """
 
 
+# TODO: Look at this later, it does not look right.
 class Capability:  # pylint: disable=too-few-public-methods
     """IO Expander Capability
     A one in the corresponding bit position below indicates
