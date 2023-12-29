@@ -22,7 +22,7 @@ Introduction
     :target: https://github.com/psf/black
     :alt: Code Style: Black
 
-Drivers for various I2C GPIO expanders. The library does not require any libraries other than the standard install of circuit python. Once the exapander has been initialized, the pins can be defined and interacted with in the same way as GPIOs on the CPU. 
+Drivers for various I2C GPIO expanders. The library does not require any libraries other than the standard install of circuit python. Once the exapander has been initialized, the pins can be defined and interacted with in the same way as GPIOs on the CPU.
 
 This library currently supports
 
@@ -33,7 +33,7 @@ This library currently supports
 * PCA9538
 * PCAL9538
 
-Other expanders will likely be added over time as I use them. 
+Other expanders will likely be added over time as I use them.
 
 Based on Adafruit's library for the `MCP230xx expanders <https://github.com/adafruit/Adafruit_CircuitPython_MCP230xx>`_
 
