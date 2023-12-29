@@ -22,8 +22,20 @@ Introduction
     :target: https://github.com/psf/black
     :alt: Code Style: Black
 
-Drivers for various I2C GPIO expanders.
+Drivers for various I2C GPIO expanders. The library does not require any libraries other than the standard install of circuit python. Once the exapander has been initialized, the pins can be defined and interacted with in the same way as GPIOs on the CPU. 
 
+This library currently supports
+
+* PCA9555
+* PCAL9555
+* PCA9554
+* PCAL9554
+* PCA9538
+* PCAL9538
+
+Other expanders will likely be added over time as I use them. 
+
+Based on Adafruit's library for the `MCP230xx expanders <https://github.com/adafruit/Adafruit_CircuitPython_MCP230xx>`_
 
 Dependencies
 =============
@@ -42,31 +54,6 @@ Installing from PyPI
 =====================
 .. note:: This library is not available on PyPI yet. Install documentation is included
    as a standard element. Stay tuned for PyPI availability!
-
-.. note:: TODO: Remove the above note if PyPI version is/will be available at time of release.
-
-On supported GNU/Linux systems like the Raspberry Pi, you can install the driver locally `from
-PyPI <https://pypi.org/project/circuitpython-i2c-expanders/>`_.
-To install for current user:
-
-.. code-block:: shell
-
-    pip3 install circuitpython-i2c-expanders
-
-To install system-wide (this may be required in some cases):
-
-.. code-block:: shell
-
-    sudo pip3 install circuitpython-i2c-expanders
-
-To install in a virtual environment in your current project:
-
-.. code-block:: shell
-
-    mkdir project-name && cd project-name
-    python3 -m venv .venv
-    source .env/bin/activate
-    pip3 install circuitpython-i2c-expanders
 
 Installing to a Connected CircuitPython Device with Circup
 ==========================================================
@@ -93,8 +80,7 @@ Or the following command to update an existing version:
 
 Usage Example
 =============
-
-.. note:: TODO: Add a quick, simple example. It and other examples should live in the examples folder and be included in docs/examples.rst.
+Take a look in the examples folder for a basic example of using this library.
 
 Documentation
 =============
