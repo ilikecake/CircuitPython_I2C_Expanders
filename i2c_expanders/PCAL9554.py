@@ -305,7 +305,7 @@ class PCAL9554(PCA9554):
 
         self.out_drive = 0xFFFF
         self.input_latch = 0x00
-        self.pupd_en = 0x00  # TODO: 0xFF for PCAL9554, 0x00 for PCAL9538
+        self.pupd_en = 0xFF
         self.pupd_sel = 0xFF
         self.irq_mask = 0xFF
         self.out_port_config = 0x00
